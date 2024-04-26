@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>BrainWriter</title>
+    <link rel="stylesheet" type="text/css" href="style.css">
+    <script src="/socket.io/socket.io.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="icon" type="image/x-icon" href="../cdn/bw.ico">
+</head>
+
+<body>
+    <div id="notifications"></div>
+    <canvas id="drawingCanvas"></canvas>
+    <script>
+        const socket = io(); // Socket.IO'ya bağlan
+        const notifications = document.getElementById('notifications');
+
+        function showNotification(message) {
+            const notification = document.createElement('div');
+            notification.className = 'notification show';
+            notification.innerHTML = message;
+            notifications.appendChild(notification);
+
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => {
+                    notification.remove();
+                }, 500); // Geçiş süresi
+            }, 2000);
+        }
+
+        socket.on('user_connected', (message) => {
+            showNotification(message); // Bağlanan kullanıcı için bildirim göster
+        });
+
+        socket.on('user_disconnected', (message) => {
+            showNotification(message); // Ayrılan kullanıcı için bildirim göster
+        });
+
+        const canvas = document.getElementById('drawingCanvas');
+        const context = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            if (!canvas) {
+                console.error("Canvas tanımlı değil. ID kontrol edin.");
+                return;
+            }
+
+            const scaleFactor = window.devicePixelRatio || 1;
+
+            canvas.width = window.innerWidth * scaleFactor;
+            canvas.height = window.innerHeight * scaleFactor;
+
+            context.scale(scaleFactor, scaleFactor);
+
+            canvas.style.width = `${window.innerWidth}px`;
+            canvas.style.height = `${window.innerHeight}px`;
+
+            context.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+
+        let drawing = false;
+        let lastX = 0;
+        let lastY = 0;
+
+        const penWidth = 0.01; // Kalem kalınlığı biraz artırıldı
+
+        canvas.addEventListener('mousedown', (event) => {
+            drawing = true;
+
+            const rect = canvas.getBoundingClientRect();
+            lastX = event.clientX - rect.left;
+            lastY = event.clientY - rect.top;
+
+            context.beginPath();
+            context.moveTo(lastX, lastY); // Başlangıç noktasını ayarla
+        });
+
+        canvas.addEventListener('mousemove', (event) => {
+            if (!drawing) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+
+            context.lineTo(x, y); // Sürekli bir çizgi için önceki koordinattan başla
+            context.lineWidth = penWidth; // Kalem kalınlığı
+            context.lineCap = 'round';
+            context.strokeStyle = `rgba(0, 0, 0, 0.5)`;
+
+            context.stroke(); // Çizgiyi çiz
+
+            lastX = x; // Son noktayı güncelle
+            lastY = y; // Son noktayı güncelle
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            drawing = false;
+        });
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas(); // Başlangıçta Canvas'ı ölçekle
+    </script>
+</body>
+
+</html>
